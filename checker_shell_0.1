@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Initialize variables
+# initialize variables
 project_folder="."
 total_errors=0
 shell_executable="simple_shell"
@@ -40,16 +40,16 @@ else
 fi
 
 # Check for Betty style in C files
-for file in $(find $project_folder -name "*.c"); do
+while IFS= read -r -d '' file; do
 	echo "Checking Betty style for $file"
-	betty-style.pl $file
+	betty-style.pl "$file"
 	if [ $? -ne 0 ]; then
 		fail "Betty style check failed for $file"
 	else
 		pass "Betty style check passed for $file"
 	fi
 
-	betty-doc.pl $file
+	betty-doc.pl "$file"
 	if [ $? -ne 0 ]; then
 		fail "Betty documentation check failed for $file"
 	else
@@ -57,7 +57,7 @@ for file in $(find $project_folder -name "*.c"); do
 	fi
 
 	# Check for direct PATH usage
-	if grep -q "\bPATH\b" $file; then
+	if grep -q "\bPATH\b" "$file"; then
 		fail "Direct PATH usage found in $file"
 	else
 		pass "No direct PATH usage in $file"
@@ -65,28 +65,43 @@ for file in $(find $project_folder -name "*.c"); do
 
 	# Check for built-in implementation
 	for builtin in "${builtins[@]}"; do
-		if grep -q -w "^\s*\(void\|int\|char\+\s\+\)*$builtin\s*(" $file; then
+		if grep -q -w "^\s*\(void\|int\|char\+\s\+\)*$builtin\s*(" "$file"; then
 			fail "Built-in $builtin possibly implemented in $file"
 		fi
 	done
 
 	# Check for special character handling
 	for char in "${special_chars[@]}"; do
-		if grep -q "[$char]" $file; then
+		if grep -q "[$char]" "$file"; then
 			fail "Special character $char found in $file, ensure proper handling"
 		fi
 	done
-done
+
+	# Check for execve usage
+	if grep -q -w "execve" "$file"; then
+		pass "execve found in $file"
+	else
+		fail "execve not found in $file, ensure it's part of the shell's core"
+	fi
+
+	# Check for environ passed to execve
+	if grep -q -w "execve(.*, .*, environ)" "$file"; then
+		pass "environ passed to execve in $file"
+	else
+		fail "environ not passed to execve in $file, ensure proper environment handling"
+	fi
+
+done < <(find "$project_folder" -name "*.c" -print0)
 
 # Check for header file include guards
-for file in $(find $project_folder -name "*.h"); do
+while IFS= read -r -d '' file; do
 	echo "Checking include guards for $file"
-	if ! grep -q "#ifndef" $file || ! grep -q "#define" $file || ! grep -q "#endif" $file; then
+	if ! grep -q "#ifndef" "$file" || ! grep -q "#define" "$file" || ! grep -q "#endif" "$file"; then
 		fail "Include guards missing in $file"
 	else
 		pass "Include guards found in $file"
 	fi
-done
+done < <(find "$project_folder" -name "*.h" -print0)
 
 # Summary
 if [ $total_errors -eq 0 ]; then
