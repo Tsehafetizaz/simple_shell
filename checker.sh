@@ -1,9 +1,11 @@
 #!/bin/bash
 
-initialize variables
+# Initialize variables
 project_folder="."
 total_errors=0
 shell_executable="simple_shell"
+builtins=("cd" "echo" "exit" "...") # Add built-in commands as needed
+special_chars=("\"" "'" "\`" "\\" "*" "&" "#")
 
 # Function to log a passed check
 pass() {
@@ -53,6 +55,27 @@ for file in $(find $project_folder -name "*.c"); do
 	else
 		pass "Betty documentation check passed for $file"
 	fi
+
+	# Check for direct PATH usage
+	if grep -q "\bPATH\b" $file; then
+		fail "Direct PATH usage found in $file"
+	else
+		pass "No direct PATH usage in $file"
+	fi
+
+	# Check for built-in implementation
+	for builtin in "${builtins[@]}"; do
+		if grep -q -w "^\s*\(void\|int\|char\+\s\+\)*$builtin\s*(" $file; then
+			fail "Built-in $builtin possibly implemented in $file"
+		fi
+	done
+
+	# Check for special character handling
+	for char in "${special_chars[@]}"; do
+		if grep -q "[$char]" $file; then
+			fail "Special character $char found in $file, ensure proper handling"
+		fi
+	done
 done
 
 # Check for header file include guards
