@@ -1,1 +1,1 @@
-This is a read me file for the simple shell project
+This is read me for the simple shell project by wendwesen tefera.
