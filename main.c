@@ -40,7 +40,7 @@ int main(void)
 
 	while (1)
 {
-		printf(": ) ");
+		printf("$ ");
 		line = read_line();
 		if (!line || feof(stdin))
 {
